@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Platform - 3D Flashcards with Spotlight Border Glow</title>
+  <style>
+    /* ==========================================================================
+       DESIGN SYSTEM TOKENS
+       ========================================================================== */
+    :root {
+      --fc-radius: 16px;
+      --fc-padding: 1.75rem;
+      --fc-perspective: 1000px;
+      
+      /* Slowed-down flipping transition: 850ms */
+      --fc-transition-duration: 850ms;
+      --fc-transition-timing: cubic-bezier(0.23, 1, 0.32, 1);
+      --fc-transition-half-duration: 425ms;
+
+      --fc-bg-front: #ffffff;
+      --fc-bg-back: #fcfcfd;
+      --fc-border-track: rgba(226, 232, 240, 0.7);
+      --fc-border-track-hover: rgba(203, 213, 225, 0.9);
+      
+      --fc-text-primary: #0f172a;
+      --fc-text-secondary: #475569;
+      --fc-text-muted: #64748b;
+      
+      --fc-accent: #2563eb;
+      --fc-accent-light: #eff6ff;
+      --fc-badge-bg: #f1f5f9;
+      --fc-badge-text: #475569;
+
+      --fc-shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+      --fc-shadow-hover: 0 10px 22px -5px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+      --fc-focus-ring: rgba(37, 99, 235, 0.5);
+
+      --bg-page: #f8fafc;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body.dark {
+      --fc-bg-front: #182234;
+      --fc-bg-back: #141b2b;
+      --fc-border-track: rgba(51, 65, 85, 0.5);
+      --fc-border-track-hover: rgba(71, 85, 105, 0.7);
+      --fc-text-primary: #f8fafc;
+      --fc-text-secondary: #cbd5e1;
+      --fc-text-muted: #94a3b8;
+      --fc-accent: #60a5fa;
+      --fc-badge-bg: #1e293b;
+      --fc-badge-text: #cbd5e1;
+      --fc-shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+      --fc-shadow-hover: 0 14px 28px -6px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+      --fc-focus-ring: rgba(96, 165, 250, 0.6);
+      --bg-page: #0f172a;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+      background-color: var(--bg-page);
+      color: var(--fc-text-primary);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--fc-border-track);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.625rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      margin: 0.25rem 0 0;
+      font-size: 0.875rem;
+      color: var(--fc-text-muted);
+    }
+
+    .theme-btn {
+      background: var(--fc-bg-front);
+      border: 1px solid var(--fc-border-track);
+      color: var(--fc-text-primary);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.875rem;
+      transition: all 0.15s ease;
+    }
+    .theme-btn:hover {
+      border-color: var(--fc-border-track-hover);
+    }
+
+    .hint-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      background: var(--fc-bg-front);
+      border: 1px solid var(--fc-border-track);
+      border-radius: 12px;
+      padding: 0.875rem 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+      color: var(--fc-text-secondary);
+    }
+
+    kbd {
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: var(--bg-page);
+      border: 1px solid var(--fc-border-track);
+      font-family: inherit;
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: var(--fc-text-primary);
+    }
+
+    /* GRID */
+    .flashcard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1.75rem;
+      width: 100%;
+    }
+
+    @media (max-width: 680px) {
+      .flashcard-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+    }
+
+    /* WRAPPER */
+    .flashcard-wrapper {
+      position: relative;
+      width: 100%;
+      perspective: var(--fc-perspective);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* TILT CONTAINER - Subtle 8deg deflection */
+    .tilt-box {
+      transform-style: preserve-3d;
+      transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* FLASHCARD */
+    .flashcard {
+      position: relative;
+      width: 100%;
+      min-height: 260px;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transform-style: preserve-3d;
+      transition: transform var(--fc-transition-duration) var(--fc-transition-timing);
+      display: block;
+      touch-action: manipulation;
+      outline: none;
+    }
+
+    .flashcard:focus-visible {
+      outline: 2px solid var(--fc-focus-ring);
+      outline-offset: 4px;
+      border-radius: var(--fc-radius);
+    }
+
+    .flashcard.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    /* 1px SPOTLIGHT BORDER FACE */
+    .flashcard-face {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 1px; /* 1px border gap */
+      border-radius: var(--fc-radius);
+      background-color: var(--fc-border-track);
+      box-shadow: var(--fc-shadow-rest);
+      overflow: hidden;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transition: background-color 0.25s ease, box-shadow 0.25s ease, transform var(--fc-transition-duration) var(--fc-transition-timing);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .flashcard:hover .flashcard-face {
+        background-color: var(--fc-border-track-hover);
+        box-shadow: var(--fc-shadow-hover);
+      }
+    }
+
+    /* Border Spotlight (Behind the solid inner card) */
+    .border-spotlight {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      filter: blur(28px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      background: radial-gradient(circle at center, #3b82f6 0%, #60a5fa 50%, transparent 80%);
+      transition: opacity 0.2s ease;
+      transform: translate(-50%, -50%);
+    }
+
+    .flashcard:hover .border-spotlight {
+      opacity: 1;
+    }
+
+    /* Solid inner card surface - Blocks light from illuminating the card face */
+    .flashcard-face-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: var(--fc-padding);
+      border-radius: calc(var(--fc-radius) - 1px);
+      background-color: var(--fc-bg-front);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .flashcard-back .flashcard-face-inner {
+      background-color: var(--fc-bg-back);
+    }
+
+    /* FRONT FACE */
+    .flashcard-front {
+      transform: rotateY(0deg);
+      z-index: 2;
+      visibility: visible;
+      transition: visibility 0s 0s, background-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .flashcard.is-flipped .flashcard-front {
+      visibility: hidden;
+      pointer-events: none;
+      transition: visibility 0s var(--fc-transition-half-duration), background-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .flashcard-front-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 0.5rem 0.25rem;
+    }
+
+    .flashcard-topic {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--fc-text-primary);
+      letter-spacing: -0.015em;
+    }
+
+    .flashcard-front-footer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 1rem;
+    }
+
+    .flashcard-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--fc-text-muted);
+      transition: color 0.2s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .flashcard:hover .flashcard-hint {
+        color: var(--fc-accent);
+      }
+    }
+
+    .flashcard-hint-icon {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      opacity: 0.75;
+    }
+
+    /* BACK FACE */
+    .flashcard-back {
+      transform: rotateY(180deg);
+      z-index: 1;
+      visibility: hidden;
+      pointer-events: none;
+      transition: visibility 0s var(--fc-transition-half-duration), background-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .flashcard.is-flipped .flashcard-back {
+      visibility: visible;
+      pointer-events: auto;
+      z-index: 2;
+      transition: visibility 0s 0s, background-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .flashcard-back-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.875rem;
+    }
+
+    .flashcard-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.025em;
+      text-transform: uppercase;
+      color: var(--fc-badge-text);
+      background-color: var(--fc-badge-bg);
+      border-radius: 6px;
+      border: 1px solid var(--fc-border-track);
+    }
+
+    .flashcard-back-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-y: auto;
+      padding: 0.25rem 0;
+    }
+
+    .flashcard-answer {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--fc-text-secondary);
+    }
+
+    .flashcard-back-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--fc-border-track);
+      margin-top: 0.75rem;
+    }
+
+    .flashcard-hint-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.775rem;
+      font-weight: 500;
+      color: var(--fc-text-muted);
+    }
+
+    /* REDUCED MOTION */
+    @media (prefers-reduced-motion: reduce) {
+      .flashcard, .tilt-box {
+        transition: none !important;
+        transform: none !important;
+      }
+      .border-spotlight {
+        display: none !important;
+      }
+      .flashcard.is-flipped {
+        transform: none !important;
+      }
+      .flashcard-face {
+        transition: opacity 300ms ease, visibility 0s 150ms !important;
+      }
+      .flashcard:not(.is-flipped) .flashcard-front {
+        opacity: 1;
+        visibility: visible;
+        transform: none !important;
+      }
+      .flashcard.is-flipped .flashcard-front {
+        opacity: 0;
+        visibility: hidden;
+        transform: none !important;
+      }
+      .flashcard:not(.is-flipped) .flashcard-back {
+        opacity: 0;
+        visibility: hidden;
+        transform: none !important;
+      }
+      .flashcard.is-flipped .flashcard-back {
+        opacity: 1;
+        visibility: visible;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div>
+        <h1 class="brand-title">StudyDeck</h1>
+        <p class="brand-subtitle">3D Flashcards with Spotlight Border Glow</p>
+      </div>
+      <button class="theme-btn" id="themeBtn" type="button">Toggle Theme</button>
+    </header>
+
+    <div class="hint-bar">
+      <div><strong>Features Active:</strong> Only Borders Glow under Cursor • Subtle 8° Reverse Tilt • 850ms Flip</div>
+      <div><kbd>Tab</kbd> to focus • <kbd>Enter</kbd> / <kbd>Space</kbd> to flip</div>
+    </div>
+
+    <!-- Responsive Flashcard Grid -->
+    <main class="flashcard-grid" id="flashcardGrid"></main>
+  </div>
+
+  <script>
+    const flashcardsData = [
+      {
+        id: 'fc-1',
+        category: 'CSS & 3D Rendering',
+        topic: 'How does CSS 3D perspective work?',
+        answer: 'The perspective property defines the distance between the z=0 plane and the user. A 1000px perspective creates subtle, realistic depth. When combined with transform-style: preserve-3d, child elements share true 3D spatial positioning.',
+        color: '#3b82f6'
+      },
+      {
+        id: 'fc-2',
+        category: 'Web Accessibility',
+        topic: 'Why is the HTML `inert` attribute critical for flip cards?',
+        answer: 'The inert attribute disables all user interaction and hides elements from assistive technology. Applying inert to the hidden card face guarantees that screen readers and Tab key focus cannot navigate into or read the back answer while the user is still looking at the question.',
+        color: '#10b981'
+      },
+      {
+        id: 'fc-3',
+        category: 'Performance',
+        topic: 'Why animate transform and opacity instead of height or margin?',
+        answer: 'Transform and opacity changes bypass browser Layout and Paint stages. They are handled directly on the compositor thread on the GPU, avoiding main-thread bottlenecks and guaranteeing smooth 60fps animations.',
+        color: '#f59e0b'
+      },
+      {
+        id: 'fc-4',
+        category: 'Computer Science',
+        topic: 'What is CAP Theorem in Distributed Systems?',
+        answer: 'CAP theorem states that a distributed data store can simultaneously provide at most two out of three guarantees: Consistency, Availability, and Partition Tolerance.',
+        color: '#8b5cf6'
+      },
+      {
+        id: 'fc-5',
+        category: 'Motion Design',
+        topic: 'How to handle `prefers-reduced-motion` for 3D interactions?',
+        answer: 'Users with vestibular motion sensitivity can feel nauseated from 3D rotational spinning. In @media (prefers-reduced-motion: reduce), the 3D rotation is disabled and replaced with a gentle opacity fade.',
+        color: '#f43f5e'
+      },
+      {
+        id: 'fc-6',
+        category: 'Architecture',
+        topic: 'What is the benefit of Uncontrolled vs. Controlled Component patterns?',
+        answer: 'An uncontrolled card encapsulates its own flip state with local state, making it zero-friction to drop in anywhere. Supporting optional controlled props allows parents to coordinate collective actions without rewriting the card.',
+        color: '#06b6d4'
+      }
+    ];
+
+    const grid = document.getElementById('flashcardGrid');
+
+    function createFlashcardElement(card) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flashcard-wrapper';
+
+      // Tilt container
+      const tiltBox = document.createElement('div');
+      tiltBox.className = 'tilt-box';
+
+      // Flashcard button
+      const cardEl = document.createElement('div');
+      cardEl.className = 'flashcard';
+      cardEl.setAttribute('role', 'button');
+      cardEl.setAttribute('tabindex', '0');
+      cardEl.setAttribute('aria-pressed', 'false');
+      cardEl.setAttribute('aria-label', `Flashcard: ${card.topic}. Status: Topic displayed. Press Enter or Space to flip.`);
+
+      let isFlipped = false;
+
+      // Front Face
+      const front = document.createElement('div');
+      front.className = 'flashcard-face flashcard-front';
+      front.setAttribute('aria-hidden', 'false');
+      
+      const frontSpotlight = document.createElement('div');
+      frontSpotlight.className = 'border-spotlight';
+      frontSpotlight.style.background = `radial-gradient(circle at center, ${card.color} 0%, transparent 70%)`;
+      front.appendChild(frontSpotlight);
+
+      const frontInner = document.createElement('div');
+      frontInner.className = 'flashcard-face-inner';
+      frontInner.innerHTML = `
+        <div class="flashcard-front-content">
+          <h3 class="flashcard-topic">${card.topic}</h3>
+        </div>
+        <div class="flashcard-front-footer">
+          <span class="flashcard-hint">
+            <svg class="flashcard-hint-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12v-3a4 4 0 0 1 4-4h12m0 0l-3-3m3 3l-3 3M20 12v3a4 4 0 0 1-4 4H4m0 0l3 3m-3-3l3-3"/>
+            </svg>
+            <span>Click to reveal answer</span>
+          </span>
+        </div>
+      `;
+      front.appendChild(frontInner);
+
+      // Back Face
+      const back = document.createElement('div');
+      back.className = 'flashcard-face flashcard-back';
+      back.setAttribute('aria-hidden', 'true');
+      back.setAttribute('inert', '');
+
+      const backSpotlight = document.createElement('div');
+      backSpotlight.className = 'border-spotlight';
+      backSpotlight.style.background = `radial-gradient(circle at center, ${card.color} 0%, transparent 70%)`;
+      back.appendChild(backSpotlight);
+
+      const backInner = document.createElement('div');
+      backInner.className = 'flashcard-face-inner';
+      backInner.innerHTML = `
+        <div class="flashcard-back-header">
+          <span class="flashcard-badge">${card.category}</span>
+          <span class="flashcard-back-topic-subtle" title="${card.topic}">${card.topic}</span>
+        </div>
+        <div class="flashcard-back-content">
+          <p class="flashcard-answer">${card.answer}</p>
+        </div>
+        <div class="flashcard-back-footer">
+          <span class="flashcard-hint-back">
+            <svg class="flashcard-hint-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 12v-3a4 4 0 0 1 4-4h12m0 0l-3-3m3 3l-3 3M20 12v3a4 4 0 0 1-4 4H4m0 0l3 3m-3-3l3-3"/>
+            </svg>
+            <span>Click to flip back</span>
+          </span>
+        </div>
+      `;
+      back.appendChild(backInner);
+
+      function toggleFlip() {
+        isFlipped = !isFlipped;
+        cardEl.classList.toggle('is-flipped', isFlipped);
+        cardEl.setAttribute('aria-pressed', isFlipped.toString());
+        cardEl.setAttribute(
+          'aria-label',
+          `Flashcard: ${card.topic}. Status: ${isFlipped ? 'Answer revealed' : 'Topic displayed'}. Press Enter or Space to flip.`
+        );
+
+        if (isFlipped) {
+          front.setAttribute('aria-hidden', 'true');
+          front.setAttribute('inert', '');
+          back.setAttribute('aria-hidden', 'false');
+          back.removeAttribute('inert');
+        } else {
+          front.setAttribute('aria-hidden', 'false');
+          front.removeAttribute('inert');
+          back.setAttribute('aria-hidden', 'true');
+          back.setAttribute('inert', '');
+        }
+      }
+
+      cardEl.addEventListener('click', toggleFlip);
+      cardEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleFlip();
+        }
+      });
+
+      // Mouse Move Tracking for 1px Border Spotlight & Subtle Reverse Tilt (8deg)
+      wrapper.addEventListener('mousemove', (e) => {
+        const rect = wrapper.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Position 1px border spotlights
+        frontSpotlight.style.left = `${mouseX}px`;
+        frontSpotlight.style.top = `${mouseY}px`;
+        backSpotlight.style.left = `${mouseX}px`;
+        backSpotlight.style.top = `${mouseY}px`;
+
+        // Subtle 8deg Reverse Tilt (matching Tilt rotationFactor={8} isRevese)
+        const xPos = (mouseX / rect.width - 0.5);
+        const yPos = (mouseY / rect.height - 0.5);
+        const rotateX = yPos * 8; // isRevese
+        const rotateY = -xPos * 8; // isRevese
+        tiltBox.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      });
+
+      wrapper.addEventListener('mouseleave', () => {
+        tiltBox.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+      });
+
+      cardEl.appendChild(front);
+      cardEl.appendChild(back);
+      tiltBox.appendChild(cardEl);
+      wrapper.appendChild(tiltBox);
+      return wrapper;
+    }
+
+    flashcardsData.forEach(card => {
+      grid.appendChild(createFlashcardElement(card));
+    });
+
+    document.getElementById('themeBtn').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+    });
+  </script>
+</body>
+</html>

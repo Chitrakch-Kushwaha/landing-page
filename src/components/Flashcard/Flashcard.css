@@ -1,0 +1,454 @@
+/**
+ * ============================================================================
+ * FLASHCARD COMPONENT STYLES - SPOTLIGHT BORDER GLOW
+ * ============================================================================
+ * Design System Tokens:
+ * Only the 1px card borders glow under the cursor, keeping the card body clean.
+ */
+
+:root {
+  /* Dimensions & Spacing */
+  --fc-radius: 16px;
+  --fc-padding: 1.75rem;
+  --fc-perspective: 1000px;
+  
+  /* Slowed-down flipping transition: 850ms */
+  --fc-transition-duration: 850ms;
+  --fc-transition-timing: cubic-bezier(0.23, 1, 0.32, 1);
+  --fc-transition-half-duration: 425ms;
+
+  /* Theme Colors - Light Mode */
+  --fc-bg-front: #ffffff;
+  --fc-bg-back: #fcfcfd;
+  --fc-border-track: rgba(226, 232, 240, 0.7);
+  --fc-border-track-hover: rgba(203, 213, 225, 0.9);
+  
+  --fc-text-primary: #0f172a;
+  --fc-text-secondary: #475569;
+  --fc-text-muted: #64748b;
+  
+  --fc-accent: #2563eb;
+  --fc-accent-light: #eff6ff;
+  --fc-badge-bg: #f1f5f9;
+  --fc-badge-text: #475569;
+
+  /* Restrained Shadows */
+  --fc-shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --fc-shadow-hover: 0 10px 22px -5px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --fc-focus-ring: rgba(37, 99, 235, 0.5);
+  
+  /* Typography */
+  --fc-font-family: inherit;
+}
+
+/* Dark theme tokens */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fc-bg-front: #182234;
+    --fc-bg-back: #141b2b;
+    --fc-border-track: rgba(51, 65, 85, 0.5);
+    --fc-border-track-hover: rgba(71, 85, 105, 0.7);
+    
+    --fc-text-primary: #f8fafc;
+    --fc-text-secondary: #cbd5e1;
+    --fc-text-muted: #94a3b8;
+    
+    --fc-accent: #60a5fa;
+    --fc-badge-bg: #1e293b;
+    --fc-badge-text: #cbd5e1;
+
+    --fc-shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+    --fc-shadow-hover: 0 14px 28px -6px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+    --fc-focus-ring: rgba(96, 165, 250, 0.6);
+  }
+}
+
+.dark {
+  --fc-bg-front: #182234;
+  --fc-bg-back: #141b2b;
+  --fc-border-track: rgba(51, 65, 85, 0.5);
+  --fc-border-track-hover: rgba(71, 85, 105, 0.7);
+  
+  --fc-text-primary: #f8fafc;
+  --fc-text-secondary: #cbd5e1;
+  --fc-text-muted: #94a3b8;
+  
+  --fc-accent: #60a5fa;
+  --fc-badge-bg: #1e293b;
+  --fc-badge-text: #cbd5e1;
+
+  --fc-shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+  --fc-shadow-hover: 0 14px 28px -6px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  --fc-focus-ring: rgba(96, 165, 250, 0.6);
+}
+
+/* ============================================================================
+ * CONTAINER & PERSPECTIVE
+ * ============================================================================ */
+
+.flashcard-wrapper {
+  position: relative;
+  width: 100%;
+  height: var(--fc-card-min-height, 260px); /* Explicit height prevents post-flip layout shift */
+  perspective: var(--fc-perspective);
+  font-family: var(--fc-font-family);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/**
+ * The inner flipping element holding preserve-3d and the slowed-down transition.
+ * Uses button semantics or interactive wrapper with full keyboard accessibility.
+ */
+.flashcard {
+  position: relative;
+  width: 100%;
+  height: 100%;            /* Fill wrapper height — no more min-height collapsing the Tilt wrapper */
+  min-height: var(--fc-card-min-height, 260px);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transform-style: preserve-3d;
+  transition: transform var(--fc-transition-duration) var(--fc-transition-timing);
+  display: block;
+  touch-action: manipulation;
+  outline: none;
+}
+
+/* Focus ring for keyboard navigation */
+.flashcard:focus-visible {
+  outline: 2px solid var(--fc-focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--fc-radius);
+}
+
+/* 3D Y-axis flip when toggled */
+.flashcard.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* ============================================================================
+ * CARD FACES WITH 1px SPOTLIGHT BORDER
+ * Only the 1px perimeter border glows under cursor movement
+ * ============================================================================ */
+
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1px; /* The 1px border gap where spotlight illuminates */
+  border-radius: var(--fc-radius);
+  background-color: var(--fc-border-track);
+  box-shadow: var(--fc-shadow-rest);
+  overflow: hidden; /* Clips spotlight so it only shines through the 1px border */
+  
+  /* 3D Backface Culling */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, transform var(--fc-transition-duration) var(--fc-transition-timing);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .flashcard:hover .flashcard-face {
+    background-color: var(--fc-border-track-hover);
+    box-shadow: var(--fc-shadow-hover);
+  }
+}
+
+/* The solid inner face that blocks spotlight light from the face body */
+.flashcard-face-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--fc-padding);
+  border-radius: calc(var(--fc-radius) - 1px);
+  background-color: var(--fc-bg-front);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.flashcard-back .flashcard-face-inner {
+  background-color: var(--fc-bg-back);
+}
+
+/* Spotlight element inside the 1px border layer */
+.flashcard-border-spotlight {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================================
+ * FRONT FACE
+ * Display only topic title and subtle "Click to reveal" hint
+ * ============================================================================ */
+
+.flashcard-front {
+  transform: rotateY(0deg);
+  z-index: 2;
+  visibility: visible;
+  transition: visibility 0s 0s, background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.flashcard.is-flipped .flashcard-front {
+  visibility: hidden;
+  pointer-events: none;
+  /* Sync visibility change with the 90-degree halfway rotation mark */
+  transition: visibility 0s var(--fc-transition-half-duration), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.flashcard-front-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+}
+
+.flashcard-topic {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--fc-text-primary);
+  letter-spacing: -0.015em;
+  word-break: break-word;
+}
+
+.flashcard-front-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1rem;
+}
+
+.flashcard-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fc-text-muted);
+  transition: color 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .flashcard:hover .flashcard-hint {
+    color: var(--fc-accent);
+  }
+}
+
+.flashcard-hint-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  opacity: 0.75;
+}
+
+/* ============================================================================
+ * BACK FACE
+ * Revealed with 180deg rotation; accessible & focusable ONLY when flipped
+ * ============================================================================ */
+
+.flashcard-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s var(--fc-transition-half-duration), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.flashcard.is-flipped .flashcard-back {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2;
+  transition: visibility 0s 0s, background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Back Face Content Structure */
+.flashcard-back-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.875rem;
+}
+
+.flashcard-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--fc-badge-text);
+  background-color: var(--fc-badge-bg);
+  border-radius: 6px;
+  border: 1px solid var(--fc-border-track);
+}
+
+.flashcard-back-topic-subtle {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fc-text-muted);
+  max-width: 50%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flashcard-back-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.flashcard-answer {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--fc-text-secondary);
+  word-break: break-word;
+}
+
+.flashcard-back-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--fc-border-track);
+  margin-top: 0.75rem;
+}
+
+.flashcard-hint-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--fc-text-muted);
+}
+
+/* ============================================================================
+ * ACCESSIBILITY & INERT ENFORCEMENT
+ * ============================================================================ */
+
+.flashcard-face[inert] {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* ============================================================================
+ * REDUCED-MOTION ACCESSIBILITY
+ * ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .flashcard {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .flashcard.is-flipped {
+    transform: none !important;
+  }
+
+  .flashcard-face {
+    transition: opacity 300ms ease, visibility 0s 150ms !important;
+  }
+
+  .flashcard:not(.is-flipped) .flashcard-front {
+    opacity: 1;
+    visibility: visible;
+    transform: none !important;
+  }
+
+  .flashcard.is-flipped .flashcard-front {
+    opacity: 0;
+    visibility: hidden;
+    transform: none !important;
+  }
+
+  .flashcard:not(.is-flipped) .flashcard-back {
+    opacity: 0;
+    visibility: hidden;
+    transform: none !important;
+  }
+
+  .flashcard.is-flipped .flashcard-back {
+    opacity: 1;
+    visibility: visible;
+    transform: none !important;
+  }
+}
+
+/* ============================================================================
+ * RESPONSIVE GRID LAYOUT
+ * ============================================================================ */
+
+.flashcard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--fc-grid-min-col, 310px), 1fr));
+  gap: 1.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 680px) {
+  .flashcard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* ============================================================================
+ * UTILITY CLASSES
+ * ============================================================================ */
+.pointer-events-none { pointer-events: none; }
+.absolute { position: absolute; }
+.relative { position: relative; }
+.inset-0 { inset: 0; }
+.h-full { height: 100%; }
+.w-full { width: 100%; }
+.rounded-full { border-radius: 9999px; }
+.transform-gpu { transform: translate3d(0, 0, 0); }
+
+.blur-xs { filter: blur(4px); }
+.blur-sm { filter: blur(8px); }
+.blur-md { filter: blur(16px); }
+.blur-lg { filter: blur(24px); }
+.blur-xl { filter: blur(32px); }
+.blur-2xl { filter: blur(48px); }
+.blur-3xl { filter: blur(64px); }
+.blur-none { filter: none; }
+
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+.opacity-0 { opacity: 0; }
+.opacity-100 { opacity: 1; }
